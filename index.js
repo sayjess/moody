@@ -1,18 +1,21 @@
 /* === Imports === */
-import { initializeApp } from "firebase/app"
-import { getAuth,
-         createUserWithEmailAndPassword,
-         signInWithEmailAndPassword,
-         signOut } from "firebase/auth"
+// import { initializeApp } from "firebase/app"
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"
+// import { getAuth } from "firebase/auth"
+import { getAuth, 
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+ } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js'
 
 /* === Firebase Setup === */
-/* IMPORTANT: Replace this with your own firebaseConfig when doing challenges */
 const firebaseConfig = {
-    apiKey: "AIzaSyBM1JtWaj4B_RyDqfnl9yqULGf3U0L33Sk",
-    authDomain: "moody-8f7be.firebaseapp.com",
-    projectId: "moody-8f7be",
-    storageBucket: "moody-8f7be.appspot.com"
-}
+    apiKey: "AIzaSyAcYGhAeivF1Q_0vkvq1uFpwqeko607Rtw",
+    authDomain: "moody-27beb.firebaseapp.com",
+    projectId: "moody-27beb",
+    storageBucket: "moody-27beb.appspot.com"
+  }
 
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
@@ -45,7 +48,34 @@ signOutButtonEl.addEventListener("click", authSignOut)
 
 /* === Main Code === */
 
-showLoggedOutView()
+/*  Challenge:
+    Import the onAuthStateChanged function from 'firebase/auth'
+
+	Use the code from the documentaion to make this work.
+    
+    Use onAuthStateChanged to:
+    
+    Show the logged in view when the user is logged in using showLoggedInView()
+    
+    Show the logged out view when the user is logged out using showLoggedOutView()
+*/
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+      showLoggedInView()
+    } else {
+      showLoggedOutView()
+    }
+  });
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    showLoggedInView()
+    // ...
+  } else {
+    showLoggedOutView()
+  }
+});
+
 
 /* === Functions === */
 
@@ -62,7 +92,6 @@ function authSignInWithEmail() {
     signInWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
             clearAuthFields()
-            showLoggedInView()
         })
         .catch((error) => {
             console.error(error.message)
@@ -76,7 +105,6 @@ function authCreateAccountWithEmail() {
     createUserWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
             clearAuthFields()
-            showLoggedInView()
         })
         .catch((error) => {
             console.error(error.message) 
@@ -86,7 +114,7 @@ function authCreateAccountWithEmail() {
 function authSignOut() {
     signOut(auth)
         .then(() => {
-            showLoggedOutView()
+            
         }).catch((error) => {
             console.error(error.message)
         })
@@ -105,7 +133,7 @@ function showLoggedInView() {
 }
 
 function showView(view) {
-    view.style.display = "flex"
+    view.style.display = "flex" 
 }
 
 function hideView(view) {
