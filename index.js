@@ -40,6 +40,8 @@ const createAccountButtonEl = document.getElementById("create-account-btn")
 
 const signOutButtonEl = document.getElementById("sign-out-btn")
 
+const userProfilePictureEl = document.getElementById("user-profile-picture")
+
 /* == UI - Event Listeners == */
 
 signInWithGoogleButtonEl.addEventListener("click", authSignInWithGoogle)
@@ -61,6 +63,7 @@ onAuthStateChanged(auth, (user) => {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     showLoggedInView()
+    showProfilePicture(userProfilePictureEl, user)
     // ...
   } else {
     showLoggedOutView()
@@ -73,14 +76,6 @@ onAuthStateChanged(auth, (user) => {
 /* = Functions - Firebase - Authentication = */
 
 function authSignInWithGoogle() {
-    /*  Challenge:
-		Import the signInWithPopup function from 'firebase/auth'
-
-        Use the code from the documentaion to make this function work.
-       
-        If the login is successful then you should console log "Signed in with Google"
-        If something went wrong, then you should log the error message using console.error.
-    */
         signInWithPopup(auth, provider)
         .then((result) => {
           console.log("Signed in with Google")
@@ -153,4 +148,24 @@ function clearInputField(field) {
 function clearAuthFields() {
 	clearInputField(emailInputEl)
 	clearInputField(passwordInputEl)
+}
+
+function showProfilePicture(imgElement, user) {
+    /*  Challenge:
+        Use the documentation to make this function work.
+        This function has two parameters: imgElement and user
+        We will call this function inside of onAuthStateChanged when the user is logged in.
+        The function will be called with the following arguments:
+        showProfilePicture(userProfilePictureEl, user)
+        
+        If the user has a profile picture URL, set the src of imgElement to that URL.
+        
+        Otherwise, you should set the src of imgElement to "assets/images/default-profile-picture.jpeg"
+    */
+        // const user = auth.currentUser;
+        if (user.photoURL) {
+          imgElement.src = user.photoURL
+        } else {
+            imgElement.src = 'https://www.freeiconspng.com/thumbs/profile-icon-png/profile-icon-9.png'
+        }
 }
