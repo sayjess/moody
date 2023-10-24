@@ -1,19 +1,18 @@
 /* === Imports === */
-// import { initializeApp } from "firebase/app"
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"
-// import { getAuth } from "firebase/auth"
-import { getAuth, 
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
- } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js'
+import { initializeApp } from "firebase/app"
+import { getAuth,
+         createUserWithEmailAndPassword,
+         signInWithEmailAndPassword,
+         signOut } from "firebase/auth"
 
 /* === Firebase Setup === */
+/* IMPORTANT: Replace this with your own firebaseConfig when doing challenges */
 const firebaseConfig = {
-    apiKey: "AIzaSyAcYGhAeivF1Q_0vkvq1uFpwqeko607Rtw",
-    authDomain: "moody-27beb.firebaseapp.com",
-    projectId: "moody-27beb",
-    storageBucket: "moody-27beb.appspot.com"
-  }
+    apiKey: "AIzaSyBM1JtWaj4B_RyDqfnl9yqULGf3U0L33Sk",
+    authDomain: "moody-8f7be.firebaseapp.com",
+    projectId: "moody-8f7be",
+    storageBucket: "moody-8f7be.appspot.com"
+}
 
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
@@ -33,12 +32,16 @@ const passwordInputEl = document.getElementById("password-input")
 const signInButtonEl = document.getElementById("sign-in-btn")
 const createAccountButtonEl = document.getElementById("create-account-btn")
 
+const signOutButtonEl = document.getElementById("sign-out-btn")
+
 /* == UI - Event Listeners == */
 
 signInWithGoogleButtonEl.addEventListener("click", authSignInWithGoogle)
 
 signInButtonEl.addEventListener("click", authSignInWithEmail)
 createAccountButtonEl.addEventListener("click", authCreateAccountWithEmail)
+
+signOutButtonEl.addEventListener("click", authSignOut)
 
 /* === Main Code === */
 
@@ -49,62 +52,71 @@ showLoggedOutView()
 /* = Functions - Firebase - Authentication = */
 
 function authSignInWithGoogle() {
-    console.log("Sign in with Google")
+    console.log("Sign in with Google") 
 }
 
 function authSignInWithEmail() {
     const email = emailInputEl.value
     const password = passwordInputEl.value
-    /*  Challenge:
-		Import the signInWithEmailAndPassword function from 'firebase/auth'
-
-        Use the code from the documentaion to make this function work.
-        
-        Make sure to first create two consts, 'email' and 'password', to fetch the values from the input fields emailInputEl and passwordInputEl.
-       
-        If the login is successful then you should show the logged in view using showLoggedInView()
-        If something went wrong, then you should log the error message using console.error.
-    */
+    
     signInWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
-    showLoggedInView()
-  })
-  .catch((error) => {
-      console.error(error.message)
-});
+        .then((userCredential) => {
+            clearAuthFields()
+            showLoggedInView()
+        })
+        .catch((error) => {
+            console.error(error.message)
+        })
 }
 
 function authCreateAccountWithEmail() {
     const email = emailInputEl.value
     const password = passwordInputEl.value
+
     createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-        // Signed up 
-        // const user = userCredential.user
-        showLoggedInView()
-        console.log(userCredential)
-    })
-    .catch((error) => {
-        console.error(error.message)
-    });
+        .then((userCredential) => {
+            clearAuthFields()
+            showLoggedInView()
+        })
+        .catch((error) => {
+            console.error(error.message) 
+        })
+}
+
+function authSignOut() {
+    signOut(auth)
+        .then(() => {
+            showLoggedOutView()
+        }).catch((error) => {
+            console.error(error.message)
+        })
 }
 
 /* == Functions - UI Functions == */
 
 function showLoggedOutView() {
-    hideElement(viewLoggedIn)
-    showElement(viewLoggedOut)
+    hideView(viewLoggedIn)
+    showView(viewLoggedOut)
 }
 
 function showLoggedInView() {
-    hideElement(viewLoggedOut)
-    showElement(viewLoggedIn)
+    hideView(viewLoggedOut)
+    showView(viewLoggedIn)
 }
 
-function showElement(element) {
-    element.style.display = "flex"
+function showView(view) {
+    view.style.display = "flex"
 }
 
-function hideElement(element) {
-    element.style.display = "none"
+function hideView(view) {
+    view.style.display = "none"
+}
+
+function clearInputField(field) {
+	field.value = ""
+}
+
+function clearAuthFields() {
+	clearInputField(emailInputEl)
+	clearInputField(passwordInputEl)
 }
