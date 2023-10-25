@@ -38,8 +38,12 @@ body {
 
 /* === Typography === */
 
-h1 {
+h1, h2 {
     margin: 0;
+}
+
+h2 {
+    font-weight: 500;
 }
 
 .app-title {
@@ -76,6 +80,10 @@ section {
     border: var(--border-width) solid var(--dark-color);
 }
 
+.user-section h2 {
+    font-size: 1.2em;
+}
+
 /* === Nav === */
 
 nav {
@@ -102,7 +110,7 @@ nav {
 .app-container {
     display: flex;
     flex-direction: column;
-    gap: 3em;
+    gap: 1em;
 }
 
 /* === Common for elements === */
@@ -192,9 +200,6 @@ button:hover {
 .google-btn-logo {
     width: 1.375em;
 }
-.icon-img-btn {
-    width: inherit;
-}
 
 .icon-btn {
     background: none;
@@ -202,6 +207,10 @@ button:hover {
     cursor: pointer;
     padding: 0;
     width: 1.875em;
+}
+
+.icon-img-btn {
+    width: inherit;
 }
 
 .icon-img-btn:hover {

@@ -8,7 +8,8 @@ import { getAuth,
     signOut,
     onAuthStateChanged,
     GoogleAuthProvider,
-    signInWithPopup
+    signInWithPopup,
+    updateProfile
  } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js'
 
 /* === Firebase Setup === */
@@ -41,7 +42,11 @@ const createAccountButtonEl = document.getElementById("create-account-btn")
 const signOutButtonEl = document.getElementById("sign-out-btn")
 
 const userProfilePictureEl = document.getElementById("user-profile-picture")
+const userGreetingEl = document.getElementById("user-greeting")
 
+// const displayNameInputEl = document.getElementById("display-name-input")
+// const photoURLInputEl = document.getElementById("photo-url-input")
+// const updateProfileButtonEl = document.getElementById("update-profile-btn")
 /* == UI - Event Listeners == */
 
 signInWithGoogleButtonEl.addEventListener("click", authSignInWithGoogle)
@@ -50,6 +55,8 @@ signInButtonEl.addEventListener("click", authSignInWithEmail)
 createAccountButtonEl.addEventListener("click", authCreateAccountWithEmail)
 
 signOutButtonEl.addEventListener("click", authSignOut)
+
+// updateProfileButtonEl.addEventListener("click", authUpdateProfile)
 
 /* === Main Code === */
 onAuthStateChanged(auth, (user) => {
@@ -64,6 +71,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     showLoggedInView()
     showProfilePicture(userProfilePictureEl, user)
+    showUserGreeting(userGreetingEl, user)
     // ...
   } else {
     showLoggedOutView()
@@ -121,6 +129,19 @@ function authSignOut() {
         })
 }
 
+// function authUpdateProfile() {
+//     const newDisplayName = displayNameInputEl.value
+//     const newPhotoURL = photoURLInputEl.value
+//     updateProfile(auth.currentUser, {
+//         displayName: newDisplayName, photoURL: newPhotoURL
+//         }).then(() => {
+//         console.log('Profile updated!')
+//         // ...
+//         }).catch((error) => {
+//             console.error(error.message)
+//         });
+// }
+
 /* == Functions - UI Functions == */
 
 function showLoggedOutView() {
@@ -168,4 +189,13 @@ function showProfilePicture(imgElement, user) {
         } else {
             imgElement.src = 'https://www.freeiconspng.com/thumbs/profile-icon-png/profile-icon-9.png'
         }
+}
+
+function showUserGreeting(element, user) {
+   if(user.displayName){
+       const userFirstName = user.displayName.split(" ")[0]
+       element.textContent = `Hey ${userFirstName}, how are you?`
+   } else {
+    element.textContent = "Hey friend, how are you?"
+   }
 }
