@@ -11,6 +11,12 @@ import { getAuth,
     signInWithPopup,
     updateProfile
  } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js'
+ import { getFirestore,
+    collection,
+    addDoc,
+    updateDoc, 
+    serverTimestamp 
+ } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
 
 /* === Firebase Setup === */
 const firebaseConfig = {
@@ -23,6 +29,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const provider = new GoogleAuthProvider()
+const db = getFirestore(app)
 
 /* === UI === */
 
@@ -44,9 +51,10 @@ const signOutButtonEl = document.getElementById("sign-out-btn")
 const userProfilePictureEl = document.getElementById("user-profile-picture")
 const userGreetingEl = document.getElementById("user-greeting")
 
-// const displayNameInputEl = document.getElementById("display-name-input")
-// const photoURLInputEl = document.getElementById("photo-url-input")
-// const updateProfileButtonEl = document.getElementById("update-profile-btn")
+const moodEmojiEls = document.getElementsByClassName("mood-emoji-btn")
+const textareaEl = document.getElementById("post-input")
+const postButtonEl = document.getElementById("post-btn")
+
 /* == UI - Event Listeners == */
 
 signInWithGoogleButtonEl.addEventListener("click", authSignInWithGoogle)
@@ -56,42 +64,39 @@ createAccountButtonEl.addEventListener("click", authCreateAccountWithEmail)
 
 signOutButtonEl.addEventListener("click", authSignOut)
 
-// updateProfileButtonEl.addEventListener("click", authUpdateProfile)
+for (let moodEmojiEl of moodEmojiEls) {
+    moodEmojiEl.addEventListener("click", selectMood)
+}
+
+postButtonEl.addEventListener("click", postButtonPressed)
+
+/* === State === */
+
+let moodState = 0
 
 /* === Main Code === */
+
 onAuthStateChanged(auth, (user) => {
     if (user) {
-      showLoggedInView()
+        showLoggedInView()
+        showProfilePicture(userProfilePictureEl, user)
+        showUserGreeting(userGreetingEl, user) 
     } else {
-      showLoggedOutView()
+        showLoggedOutView() 
     }
-  });
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    showLoggedInView()
-    showProfilePicture(userProfilePictureEl, user)
-    showUserGreeting(userGreetingEl, user)
-    // ...
-  } else {
-    showLoggedOutView()
-  }
-});
-
+})
 
 /* === Functions === */
 
 /* = Functions - Firebase - Authentication = */
 
 function authSignInWithGoogle() {
-        signInWithPopup(auth, provider)
+    signInWithPopup(auth, provider)
         .then((result) => {
-          console.log("Signed in with Google")
+            console.log("Signed in with Google")
         }).catch((error) => {
-            console.log(error.message)
-        });
-
-
+            console.error(error.message)
+        })
 }
 
 function authSignInWithEmail() {
@@ -123,26 +128,41 @@ function authCreateAccountWithEmail() {
 function authSignOut() {
     signOut(auth)
         .then(() => {
-            
         }).catch((error) => {
             console.error(error.message)
         })
 }
 
-// function authUpdateProfile() {
-//     const newDisplayName = displayNameInputEl.value
-//     const newPhotoURL = photoURLInputEl.value
-//     updateProfile(auth.currentUser, {
-//         displayName: newDisplayName, photoURL: newPhotoURL
-//         }).then(() => {
-//         console.log('Profile updated!')
-//         // ...
-//         }).catch((error) => {
-//             console.error(error.message)
-//         });
-// }
+/* = Functions - Firebase - Cloud Firestore = */
+
+async function addPostToDB(postBody, user) {
+    try {
+        const docRef = await addDoc(collection(db, "posts"), {
+            body: postBody,
+            uid: user.uid,
+            createdAt: serverTimestamp(),
+            mood: moodState
+            // Challenge: Add a field called 'mood' of type number where you save the moodState
+        })
+        console.log("Document written with ID: ", docRef.id)
+    } catch (error) {
+        console.error(error.message)
+    }
+
+}
 
 /* == Functions - UI Functions == */
+
+function postButtonPressed() {
+    const postBody = textareaEl.value
+    const user = auth.currentUser
+    
+    if (postBody && moodState) {
+        addPostToDB(postBody, user)
+        clearInputField(textareaEl)
+        resetAllMoodElements(moodEmojiEls)
+    }
+}
 
 function showLoggedOutView() {
     hideView(viewLoggedIn)
@@ -172,30 +192,60 @@ function clearAuthFields() {
 }
 
 function showProfilePicture(imgElement, user) {
-    /*  Challenge:
-        Use the documentation to make this function work.
-        This function has two parameters: imgElement and user
-        We will call this function inside of onAuthStateChanged when the user is logged in.
-        The function will be called with the following arguments:
-        showProfilePicture(userProfilePictureEl, user)
-        
-        If the user has a profile picture URL, set the src of imgElement to that URL.
-        
-        Otherwise, you should set the src of imgElement to "assets/images/default-profile-picture.jpeg"
-    */
-        // const user = auth.currentUser;
-        if (user.photoURL) {
-          imgElement.src = user.photoURL
-        } else {
-            imgElement.src = 'https://www.freeiconspng.com/thumbs/profile-icon-png/profile-icon-9.png'
-        }
+    const photoURL = user.photoURL
+    
+    if (photoURL) {
+        imgElement.src = photoURL
+    } else {
+        imgElement.src = "assets/images/default-profile-picture.jpeg"
+    }
 }
 
 function showUserGreeting(element, user) {
-   if(user.displayName){
-       const userFirstName = user.displayName.split(" ")[0]
-       element.textContent = `Hey ${userFirstName}, how are you?`
-   } else {
-    element.textContent = "Hey friend, how are you?"
-   }
+    const displayName = user.displayName
+    
+    if (displayName) {
+        const userFirstName = displayName.split(" ")[0]
+        
+        element.textContent = `Hey ${userFirstName}, how are you?`
+    } else {
+        element.textContent = `Hey friend, how are you?`
+    }
+}
+
+/* = Functions - UI Functions - Mood = */
+
+function selectMood(event) {
+    const selectedMoodEmojiElementId = event.currentTarget.id
+    
+    changeMoodsStyleAfterSelection(selectedMoodEmojiElementId, moodEmojiEls)
+    
+    const chosenMoodValue = returnMoodValueFromElementId(selectedMoodEmojiElementId)
+    
+    moodState = chosenMoodValue
+}
+
+function changeMoodsStyleAfterSelection(selectedMoodElementId, allMoodElements) {
+    for (let moodEmojiEl of moodEmojiEls) {
+        if (selectedMoodElementId === moodEmojiEl.id) {
+            moodEmojiEl.classList.remove("unselected-emoji")          
+            moodEmojiEl.classList.add("selected-emoji")
+        } else {
+            moodEmojiEl.classList.remove("selected-emoji")
+            moodEmojiEl.classList.add("unselected-emoji")
+        }
+    }
+}
+
+function resetAllMoodElements(allMoodElements) {
+    for (let moodEmojiEl of allMoodElements) {
+        moodEmojiEl.classList.remove("selected-emoji")
+        moodEmojiEl.classList.remove("unselected-emoji")
+    }
+    
+    moodState = 0
+}
+
+function returnMoodValueFromElementId(elementId) {
+    return Number(elementId.slice(5))
 }
