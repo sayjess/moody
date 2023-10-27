@@ -15,7 +15,11 @@ import { getAuth,
     collection,
     addDoc,
     updateDoc, 
-    serverTimestamp 
+    serverTimestamp,
+    onSnapshot,
+    query,
+    orderBy,
+    where
  } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
 
 /* === Firebase Setup === */
@@ -55,6 +59,12 @@ const moodEmojiEls = document.getElementsByClassName("mood-emoji-btn")
 const textareaEl = document.getElementById("post-input")
 const postButtonEl = document.getElementById("post-btn")
 
+const allFilterButtonEl = document.getElementById("all-filter-btn")
+
+const filterButtonEls = document.getElementsByClassName("filter-btn")
+
+const postsEl = document.getElementById("posts")
+
 /* == UI - Event Listeners == */
 
 signInWithGoogleButtonEl.addEventListener("click", authSignInWithGoogle)
@@ -68,11 +78,20 @@ for (let moodEmojiEl of moodEmojiEls) {
     moodEmojiEl.addEventListener("click", selectMood)
 }
 
+for (let filterButtonEl of filterButtonEls) {
+    filterButtonEl.addEventListener("click", selectFilter)
+}
+
 postButtonEl.addEventListener("click", postButtonPressed)
+
 
 /* === State === */
 
 let moodState = 0
+
+/* === Global Constants === */
+
+const collectionName = "posts"
 
 /* === Main Code === */
 
@@ -80,7 +99,8 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         showLoggedInView()
         showProfilePicture(userProfilePictureEl, user)
-        showUserGreeting(userGreetingEl, user) 
+        showUserGreeting(userGreetingEl, user)
+        fetchInRealtimeAndRenderPostsFromDB(user)
     } else {
         showLoggedOutView() 
     }
@@ -137,21 +157,53 @@ function authSignOut() {
 
 async function addPostToDB(postBody, user) {
     try {
-        const docRef = await addDoc(collection(db, "posts"), {
+        const docRef = await addDoc(collection(db, collectionName), {
             body: postBody,
             uid: user.uid,
             createdAt: serverTimestamp(),
             mood: moodState
-            // Challenge: Add a field called 'mood' of type number where you save the moodState
         })
-        console.log("Document written with ID: ", docRef.id)
+        // console.log("Document written with ID: ", docRef.id)
     } catch (error) {
         console.error(error.message)
     }
 
 }
 
+function fetchInRealtimeAndRenderPostsFromDB(user) {
+    console.log(user.uid)
+    const q = query(collection(db, collectionName), orderBy("createdAt", "desc"), where ("uid", "==", user.uid));
+    onSnapshot(q, (querySnapshot) => {
+        clearAll(postsEl)
+        querySnapshot.forEach((doc) => {
+            // doc.data() is never undefined for query doc snapshots
+            // console.log(doc.data())
+            renderPost(postsEl, doc.data())
+        });
+    })
+}
 /* == Functions - UI Functions == */
+
+function renderPost(postsEl, postData) {
+    postsEl.innerHTML += 
+        `
+            <div class="post">
+                <div class="header">
+                    <h3>${displayDate(postData.createdAt )}</h3>
+                    <img src="assets/emojis/${postData.mood}.png">
+                </div>
+                <p>
+                    ${replaceNewlinesWithBrTags(postData.body)}
+                </p>
+            </div>
+        `
+}
+
+function replaceNewlinesWithBrTags(inputString) {
+    return inputString.replace(/(?:\r\n|\r|\n)/g, "<br>")
+    // Challenge: Use the replace method on inputString to replace newlines with break tags and return the result\
+    
+}
 
 function postButtonPressed() {
     const postBody = textareaEl.value
@@ -162,6 +214,10 @@ function postButtonPressed() {
         clearInputField(textareaEl)
         resetAllMoodElements(moodEmojiEls)
     }
+}
+
+function clearAll(element) {
+    element.innerHTML = ""
 }
 
 function showLoggedOutView() {
@@ -197,7 +253,7 @@ function showProfilePicture(imgElement, user) {
     if (photoURL) {
         imgElement.src = photoURL
     } else {
-        imgElement.src = "assets/images/default-profile-picture.jpeg"
+        imgElement.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/2048px-Default_pfp.svg.png"
     }
 }
 
@@ -210,6 +266,28 @@ function showUserGreeting(element, user) {
         element.textContent = `Hey ${userFirstName}, how are you?`
     } else {
         element.textContent = `Hey friend, how are you?`
+    }
+}
+
+
+function displayDate(firebaseDate) {
+    if(firebaseDate){
+        const date = firebaseDate.toDate()
+        
+        const day = date.getDate()
+        const year = date.getFullYear()
+        
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        const month = monthNames[date.getMonth()]
+    
+        let hours = date.getHours()
+        let minutes = date.getMinutes()
+        hours = hours < 10 ? "0" + hours : hours
+        minutes = minutes < 10 ? "0" + minutes : minutes
+    
+        return `${day} ${month} ${year} - ${hours}:${minutes}`
+    } else {
+        return "date loading ..."
     }
 }
 
@@ -248,4 +326,30 @@ function resetAllMoodElements(allMoodElements) {
 
 function returnMoodValueFromElementId(elementId) {
     return Number(elementId.slice(5))
+}
+
+/* == Functions - UI Functions - Date Filters == */
+
+function resetAllFilterButtons(allFilterButtons) {
+    for (let filterButtonEl of allFilterButtons) {
+        filterButtonEl.classList.remove("selected-filter")
+    }
+}
+
+function updateFilterButtonStyle(element) {
+    element.classList.add("selected-filter")
+}
+
+function selectFilter(event) {
+    const user = auth.currentUser
+    
+    const selectedFilterElementId = event.target.id
+    
+    const selectedFilterPeriod = selectedFilterElementId.split("-")[0]
+    
+    const selectedFilterElement = document.getElementById(selectedFilterElementId)
+    
+    resetAllFilterButtons(filterButtonEls)
+    
+    updateFilterButtonStyle(selectedFilterElement)
 }
