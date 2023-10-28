@@ -1,28 +1,25 @@
 /* === Imports === */
-// import { initializeApp } from "firebase/app"
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"
-// import { getAuth } from "firebase/auth"
-import { getAuth, 
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    GoogleAuthProvider,
-    signInWithPopup,
-    updateProfile
- } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js'
- import { getFirestore,
-    collection,
-    addDoc,
-    updateDoc, 
-    serverTimestamp,
-    onSnapshot,
-    query,
-    orderBy,
-    where
- } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+import { getAuth,
+         createUserWithEmailAndPassword,
+         signInWithEmailAndPassword,
+         signOut,
+         onAuthStateChanged, 
+         GoogleAuthProvider,
+         signInWithPopup } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"
+import { getFirestore,
+         collection,
+         addDoc,
+         serverTimestamp,
+         onSnapshot,
+         query,
+         where,
+         orderBy,
+        doc,
+        updateDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"
 
 /* === Firebase Setup === */
+/* IMPORTANT: Replace this with your own firebaseConfig when doing challenges */
 const firebaseConfig = {
     apiKey: "AIzaSyAcYGhAeivF1Q_0vkvq1uFpwqeko607Rtw",
     authDomain: "moody-27beb.firebaseapp.com",
@@ -84,7 +81,6 @@ for (let filterButtonEl of filterButtonEls) {
 
 postButtonEl.addEventListener("click", postButtonPressed)
 
-
 /* === State === */
 
 let moodState = 0
@@ -100,9 +96,10 @@ onAuthStateChanged(auth, (user) => {
         showLoggedInView()
         showProfilePicture(userProfilePictureEl, user)
         showUserGreeting(userGreetingEl, user)
-        fetchInRealtimeAndRenderPostsFromDB(user)
+        updateFilterButtonStyle(allFilterButtonEl)
+        fetchAllPosts(user)
     } else {
-        showLoggedOutView() 
+        showLoggedOutView()
     }
 })
 
@@ -163,46 +160,182 @@ async function addPostToDB(postBody, user) {
             createdAt: serverTimestamp(),
             mood: moodState
         })
-        // console.log("Document written with ID: ", docRef.id)
+        console.log("Document written with ID: ", docRef.id)
     } catch (error) {
         console.error(error.message)
     }
-
 }
 
-function fetchInRealtimeAndRenderPostsFromDB(user) {
-    console.log(user.uid)
-    const q = query(collection(db, collectionName), orderBy("createdAt", "desc"), where ("uid", "==", user.uid));
-    onSnapshot(q, (querySnapshot) => {
+async function updatePostInDB(docId, newBody) {
+
+    const docRef = doc(db, collectionName, docId);
+    await updateDoc(docRef, {
+    body: newBody
+    });
+}
+
+function fetchInRealtimeAndRenderPostsFromDB(query, user) {
+    onSnapshot(query, (querySnapshot) => {
         clearAll(postsEl)
+        
         querySnapshot.forEach((doc) => {
-            // doc.data() is never undefined for query doc snapshots
-            // console.log(doc.data())
-            renderPost(postsEl, doc.data())
-        });
+            renderPost(postsEl, doc)
+        })
     })
 }
+
+function fetchTodayPosts(user) {
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date()
+    endOfDay.setHours(23, 59, 59, 999)
+    
+    const postsRef = collection(db, collectionName)
+    
+    const q = query(postsRef, where("uid", "==", user.uid),
+                              where("createdAt", ">=", startOfDay),
+                              where("createdAt", "<=", endOfDay),
+                              orderBy("createdAt", "desc"))
+                              
+    fetchInRealtimeAndRenderPostsFromDB(q, user)                  
+}
+
+function fetchWeekPosts(user) {
+    const startOfWeek = new Date()
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    if (startOfWeek.getDay() === 0) { // If today is Sunday
+        startOfWeek.setDate(startOfWeek.getDate() - 6) // Go to previous Monday
+    } else {
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1)
+    }
+    
+    const endOfDay = new Date()
+    endOfDay.setHours(23, 59, 59, 999)
+    
+    const postsRef = collection(db, collectionName)
+    
+    const q = query(postsRef, where("uid", "==", user.uid),
+                              where("createdAt", ">=", startOfWeek),
+                              where("createdAt", "<=", endOfDay),
+                              orderBy("createdAt", "desc"))
+                              
+    fetchInRealtimeAndRenderPostsFromDB(q, user)
+}
+
+function fetchMonthPosts(user) {
+    const startOfMonth = new Date()
+    startOfMonth.setHours(0, 0, 0, 0)
+    startOfMonth.setDate(1)
+
+    const endOfDay = new Date()
+    endOfDay.setHours(23, 59, 59, 999)
+
+	const postsRef = collection(db, collectionName)
+    
+    const q = query(postsRef, where("uid", "==", user.uid),
+                              where("createdAt", ">=", startOfMonth),
+                              where("createdAt", "<=", endOfDay),
+                              orderBy("createdAt", "desc"))
+
+    fetchInRealtimeAndRenderPostsFromDB(q, user)
+}
+
+function fetchAllPosts(user) {
+    const postsRef = collection(db, collectionName)
+    
+    const q = query(postsRef, where("uid", "==", user.uid),
+                              orderBy("createdAt", "desc"))
+
+    fetchInRealtimeAndRenderPostsFromDB(q, user)
+}
+
 /* == Functions - UI Functions == */
 
-function renderPost(postsEl, postData) {
-    postsEl.innerHTML += 
-        `
-            <div class="post">
-                <div class="header">
-                    <h3>${displayDate(postData.createdAt )}</h3>
-                    <img src="assets/emojis/${postData.mood}.png">
-                </div>
-                <p>
-                    ${replaceNewlinesWithBrTags(postData.body)}
-                </p>
-            </div>
-        `
+function createPostHeader(postData) {
+    /*
+        <div class="header">
+        </div>
+    */
+    const headerDiv = document.createElement("div")
+    headerDiv.className = "header"
+    
+        /* 
+            <h3>21 Sep 2023 - 14:35</h3>
+        */
+        const headerDate = document.createElement("h3")
+        headerDate.textContent = displayDate(postData.createdAt)
+        headerDiv.appendChild(headerDate)
+        
+        /* 
+            <img src="assets/emojis/5.png">
+        */
+        const moodImage = document.createElement("img")
+        moodImage.src = `assets/emojis/${postData.mood}.png`
+        headerDiv.appendChild(moodImage)
+        
+    return headerDiv
+}
+
+function createPostBody(postData) {
+    /*
+        <p>This is a post</p>
+    */
+    const postBody = document.createElement("p")
+    postBody.innerHTML = replaceNewlinesWithBrTags(postData.body)
+    
+    return postBody
+}
+
+function createPostUpdateButton(wholeDoc) {
+    const postId = wholeDoc.id
+    const postData = wholeDoc.data()
+    /* 
+        <button class="edit-color">Edit</button>
+    */
+    const button = document.createElement("button")
+    button.textContent = "Edit"
+    button.classList.add("edit-color")
+    button.addEventListener("click", function() {
+        const newBody = prompt("Edit the post", postData.body)
+        if (newBody) {
+            updatePostInDB(postId, newBody)
+        }
+    })
+    
+    return button
+}
+
+function createPostFooter(wholeDoc) {
+    /* 
+        <div class="footer">
+            <button>Edit</button>
+        </div>
+    */
+    const footerDiv = document.createElement("div")
+    footerDiv.className = "footer"
+    
+    footerDiv.appendChild(createPostUpdateButton(wholeDoc))
+    
+    return footerDiv
+}
+
+function renderPost(postsEl, wholeDoc) {
+    const postData = wholeDoc.data()
+     
+    const postDiv = document.createElement("div")
+    postDiv.className = "post"
+    
+    postDiv.appendChild(createPostHeader(postData))
+    postDiv.appendChild(createPostBody(postData))
+    postDiv.appendChild(createPostFooter(wholeDoc))
+    
+    postsEl.appendChild(postDiv)
 }
 
 function replaceNewlinesWithBrTags(inputString) {
-    return inputString.replace(/(?:\r\n|\r|\n)/g, "<br>")
-    // Challenge: Use the replace method on inputString to replace newlines with break tags and return the result\
-    
+    return inputString.replace(/\n/g, "<br>")
 }
 
 function postButtonPressed() {
@@ -269,26 +402,25 @@ function showUserGreeting(element, user) {
     }
 }
 
-
 function displayDate(firebaseDate) {
-    if(firebaseDate){
-        const date = firebaseDate.toDate()
-        
-        const day = date.getDate()
-        const year = date.getFullYear()
-        
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        const month = monthNames[date.getMonth()]
-    
-        let hours = date.getHours()
-        let minutes = date.getMinutes()
-        hours = hours < 10 ? "0" + hours : hours
-        minutes = minutes < 10 ? "0" + minutes : minutes
-    
-        return `${day} ${month} ${year} - ${hours}:${minutes}`
-    } else {
-        return "date loading ..."
+    if (!firebaseDate) {
+        return "Date processing"
     }
+    
+    const date = firebaseDate.toDate()
+    
+    const day = date.getDate()
+    const year = date.getFullYear()
+    
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const month = monthNames[date.getMonth()]
+
+    let hours = date.getHours()
+    let minutes = date.getMinutes()
+    hours = hours < 10 ? "0" + hours : hours
+    minutes = minutes < 10 ? "0" + minutes : minutes
+
+    return `${day} ${month} ${year} - ${hours}:${minutes}`
 }
 
 /* = Functions - UI Functions - Mood = */
@@ -340,6 +472,18 @@ function updateFilterButtonStyle(element) {
     element.classList.add("selected-filter")
 }
 
+function fetchPostsFromPeriod(period, user) {
+    if (period === "today") {
+        fetchTodayPosts(user)
+    } else if (period === "week") {
+        fetchWeekPosts(user)
+    } else if (period === "month") {
+        fetchMonthPosts(user)
+    } else {
+        fetchAllPosts(user)
+    }
+}
+
 function selectFilter(event) {
     const user = auth.currentUser
     
@@ -352,4 +496,6 @@ function selectFilter(event) {
     resetAllFilterButtons(filterButtonEls)
     
     updateFilterButtonStyle(selectedFilterElement)
+    
+    fetchPostsFromPeriod(selectedFilterPeriod, user)
 }
