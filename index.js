@@ -15,8 +15,9 @@ import { getFirestore,
          query,
          where,
          orderBy,
-        doc,
-        updateDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"
+         doc,
+         updateDoc,
+        deleteDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"
 
 /* === Firebase Setup === */
 /* IMPORTANT: Replace this with your own firebaseConfig when doing challenges */
@@ -160,18 +161,29 @@ async function addPostToDB(postBody, user) {
             createdAt: serverTimestamp(),
             mood: moodState
         })
-        console.log("Document written with ID: ", docRef.id)
     } catch (error) {
         console.error(error.message)
     }
 }
 
 async function updatePostInDB(docId, newBody) {
+    const postRef = doc(db, collectionName, docId);
 
-    const docRef = doc(db, collectionName, docId);
-    await updateDoc(docRef, {
-    body: newBody
-    });
+    await updateDoc(postRef, {
+        body: newBody
+    })
+}
+
+async function deletePostFromDB(docId) {
+    /* Challenge:
+        Import deleteDoc and doc from 'firebase/firestore'
+        
+        Use the code from the documentation to make this function work.
+        
+        The function should delete the correct post in the database using the docId
+     */
+
+        await deleteDoc(doc(db, collectionName, docId));
 }
 
 function fetchInRealtimeAndRenderPostsFromDB(query, user) {
@@ -291,6 +303,7 @@ function createPostBody(postData) {
 function createPostUpdateButton(wholeDoc) {
     const postId = wholeDoc.id
     const postData = wholeDoc.data()
+    
     /* 
         <button class="edit-color">Edit</button>
     */
@@ -299,6 +312,7 @@ function createPostUpdateButton(wholeDoc) {
     button.classList.add("edit-color")
     button.addEventListener("click", function() {
         const newBody = prompt("Edit the post", postData.body)
+        
         if (newBody) {
             updatePostInDB(postId, newBody)
         }
@@ -307,23 +321,41 @@ function createPostUpdateButton(wholeDoc) {
     return button
 }
 
+function createPostDeleteButton(wholeDoc) {
+    const postId = wholeDoc.id
+    
+    /* 
+        <button class="delete-color">Delete</button>
+    */
+    const button = document.createElement('button')
+    button.textContent = 'Delete'
+    button.classList.add("delete-color")
+    button.addEventListener('click', function() {
+        // console.log("Delete post")
+        deletePostFromDB(postId)
+    })
+    return button
+}
+
 function createPostFooter(wholeDoc) {
     /* 
         <div class="footer">
             <button>Edit</button>
+            <button>Delete</button>
         </div>
     */
     const footerDiv = document.createElement("div")
     footerDiv.className = "footer"
     
     footerDiv.appendChild(createPostUpdateButton(wholeDoc))
+    footerDiv.appendChild(createPostDeleteButton(wholeDoc))
     
     return footerDiv
 }
 
 function renderPost(postsEl, wholeDoc) {
     const postData = wholeDoc.data()
-     
+    
     const postDiv = document.createElement("div")
     postDiv.className = "post"
     
